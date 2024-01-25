@@ -1,0 +1,94 @@
+model User{
+  id String @id @default(uuid())
+  name String 
+  email String @unique
+  address String?
+  phoneNo String
+  password String
+  reviews Review[]
+  orders Order[]
+  cart Cart?
+  profile Profile?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, email])
+}
+
+model Product{
+  id String @id @default(uuid())
+  product String
+  brand String
+  images String[]
+  display_images String
+  price Decimal 
+  description String?
+  sizes String[]
+  reviews Review[]
+  stock Int @default(1)
+  order OrderItems[]
+  carts Cart[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review{
+  id String @id @default(uuid())
+  rating Decimal @default(0)
+  review String?
+  userId String
+  user User @relation(fields: [userId],references: [id])
+  productId String
+  product Product @relation(fields: [productId],references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order{
+  id String @id @default(uuid())
+  totalAmount Int 
+  userId String
+  user User @relation(fields: [userId],references: [id])
+  orderItems OrderItems[]
+  status String @default("Pending")
+  paymentStatus String @default("Pending")
+  paymentMode String @default("COD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItems{
+  id String @id @default(uuid())
+  quantity Int @default(1)
+  prodcutId String
+  product Product @relation(fields: [prodcutId],references: [id])
+  orderId String
+  order Order @relation(fields: [orderId],references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Cart{
+  id String @id @default(uuid())
+  userId String @unique
+  user User @relation(fields: [userId],references: [id])
+  products Product[]
+  updatedAt DateTime @updatedAt
+}
+
+model Profile{
+  id String @id @default(uuid())
+  userId String
+  email String
+  user User @relation(fields: [userId,email],references: [id,email])
+  @@unique([userId, email])
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
