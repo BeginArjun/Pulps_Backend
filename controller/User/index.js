@@ -51,15 +51,29 @@ export const createUser=async(req,res)=>{
             return res.status(401).json({error:'User Exists'})
         }
         else{
-            const data={name,email,phoneNo,password}
+            const data={name,email,phoneNo,password,}
             const user=await client.user.create({
+                include:{
+                    profile:true,
+                    cart:true
+                },
                 data:data
+            })
+            const profile=await client.profile.create({
+                data:{
+                    user:{
+                        connect:{
+                            id:user.id,
+                            email:user.email
+                        }
+                    }
+                }
             })
             res.status(200).json(user)
         }
     }
     catch(err){
-        return res.status(500).json({err:'Server Error'})
+        return res.status(500).json({err:err.stack})
     }
 }
 
