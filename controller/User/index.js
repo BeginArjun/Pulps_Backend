@@ -51,7 +51,7 @@ export const createUser=async(req,res)=>{
             return res.status(401).json({error:'User Exists'})
         }
         else{
-            const data={name,email,phoneNo,password,}
+            const data={name,email,phoneNo,password}
             const user=await client.user.create({
                 include:{
                     profile:true,
@@ -69,7 +69,17 @@ export const createUser=async(req,res)=>{
                     }
                 }
             })
-            res.status(200).json(user)
+
+            const cart=await client.cart.create({
+                data:{
+                    user:{
+                        connect:{
+                            id:user.id,
+                        }
+                    }
+                }
+            })
+            res.status(201).json(user)
         }
     }
     catch(err){
