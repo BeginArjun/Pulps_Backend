@@ -7,6 +7,7 @@ model User{
   password String
   reviews Review[]
   orders Order[]
+  favourites Favourite[]
   cart Cart?
   profile Profile?
   createdAt DateTime @default(now())
@@ -19,15 +20,26 @@ model Product{
   id String @id @default(uuid())
   product String
   brand String
-  images String[]
   display_images String
   price Decimal 
+  sale_price Decimal?
   description String?
-  sizes String[]
+  caption String?
   reviews Review[]
   stock Int @default(1)
   order OrderItems[]
-  carts Cart[]
+  cartItems CartItems[]
+  favourites Favourite[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Favourite{
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId],references: [id])
+  productId String
+  product Product @relation(fields: [productId],references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -68,11 +80,22 @@ model OrderItems{
   updatedAt DateTime @updatedAt
 }
 
+model CartItems{
+  id String @id @default(uuid())
+  quantity Int @default(1)
+  productId String @unique
+  product Product @relation(fields:[productId],references: [id])
+  cartId String
+  cart Cart @relation(fields: [cartId],references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Cart{
   id String @id @default(uuid())
   userId String @unique
   user User @relation(fields: [userId],references: [id])
-  products Product[]
+  cartItems CartItems[]
   updatedAt DateTime @updatedAt
 }
 

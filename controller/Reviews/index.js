@@ -2,11 +2,12 @@ import client from "../../db/index.js"
 
 export const createReview=async(req,res)=>{
     try{
-        const {review,userId,rating}=req.body
+        const {id}=req.user
+        const {review,rating}=req.body
         const {productId}=req.params
         const reviewExist=await client.review.findMany({
             where:{
-                userId:userId,
+                userId:id,
                 productId:productId
             }
         })

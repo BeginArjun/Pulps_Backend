@@ -2,7 +2,20 @@ import client from "../../db/index.js";
 
 export const getAllProducts=async(req,res)=>{
     try{
-        const products=await client.product.findMany()
+        const products=await client.product.findMany({
+            include:{
+                reviews:{
+                    include:{
+                        user:{
+                            select:{
+                                id:true,
+                                name:true
+                            }
+                        }
+                    }
+                },
+            }
+        })
         if(!products){
             return res.status(404).json({error:'No Product Found'})
         }
@@ -15,8 +28,8 @@ export const getAllProducts=async(req,res)=>{
 
 export const createProducts=async(req,res)=>{
     try{
-        const {product,brand,images,price,description,sizes,stock}=req.body 
-        const data = { product, brand, images,display_images:images[0], price, description, sizes, stock: stock ? stock : 1 }
+        const {product,brand,display_images,price,description,stock,caption,sale_price}=req.body 
+        const data = { sale_price,product, brand, display_images, price, description, stock: stock ? stock : 1,caption:caption?caption:null}
         const products = await client.product.create({
             data: data
         })
@@ -33,16 +46,16 @@ export const getProductByName=async(req,res)=>{
         const { name } = req.query
         const productExist = await client.product.findMany({
             where: {
-                product: {
-                    contains:name,
+                description: {
+                    contains:`_${name}`,
                     mode:'insensitive'
                 }
             }
         })
         if (!productExist) {
-            return res.status(404).json({ error: 'Product Does not Exist' })
+            return res.status(404).json({ error: 'Product Does not Exist',productExist:productExist })
         }
-        res.status(201).json(productExist)
+        res.status(200).json(productExist)
     }
     catch (err) {
         return res.status(500).json({error:err.stack})
@@ -87,6 +100,25 @@ export const getProductById=async(req,res)=>{
         else{
             res.status(201).json(productExist)
         }
+    }
+    catch(err){
+        return res.status(500).json({error:err.stack})
+    }
+}
+
+export const getTopProducts=async(req,res)=>{
+    try{
+        const products=await client.product.findMany({
+            orderBy:{
+                reviews:{
+                    rating:'desc'
+                }
+            }
+        })
+        if(!products){
+            return res.status(404).json({error:'No Product Found'})
+        }
+        res.status(200).json(products)
     }
     catch(err){
         return res.status(500).json({error:err.stack})

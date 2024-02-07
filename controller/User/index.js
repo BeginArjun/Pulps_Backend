@@ -1,4 +1,36 @@
 import client from '../../db/index.js'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+
+export const authUser=async(req,res)=>{
+    try{
+        const {email,password}=req.body
+        const user=await client.user.findUnique({
+            where:{
+                email:email
+            }
+        })
+        if(!user){
+            return res.status(401).json({error:'Invalid Credentials: User does not exist'})
+        }
+        else{
+            const isPass=await bcrypt.compare(password,user.password)
+            if(isPass){
+                const token=jwt.sign({id:user.id},process.env.JWT_SECRET_KEY,{
+                    expiresIn: 30 * 24 * 60 * 60 * 1000,
+                  })
+                res.cookie("jwt", token, { maxAge: 30 * 24 * 60 * 60, httpOnly: true });
+                res.status(200).json({status:"ok"})
+            }
+            else{
+                return res.status(401).json({error:'Invalid Credentials ',isPass})
+            }
+        }
+    }
+    catch(err){
+        return res.status(500).json({err:err.stack})
+    }
+}
 
 export const getAllUser=async(req,res)=>{
     try{
@@ -34,12 +66,14 @@ export const getUserById=async(req,res)=>{
     }
 }
 
+
 export const createUser=async(req,res)=>{
     const {
         name,
         email,
         password,
-        phoneNo
+        phoneNo,
+        address
     }=req.body
     try{
         const userExist=await client.user.findUnique({
@@ -51,34 +85,29 @@ export const createUser=async(req,res)=>{
             return res.status(401).json({error:'User Exists'})
         }
         else{
-            const data={name,email,phoneNo,password}
+            const data={name,email,phoneNo,password:await bcrypt.hash(password,10),address:address?address:null}
             const user=await client.user.create({
                 include:{
                     profile:true,
                     cart:true
                 },
-                data:data
-            })
-            const profile=await client.profile.create({
                 data:{
-                    user:{
-                        connect:{
-                            id:user.id,
-                            email:user.email
-                        }
-                    }
+                    ...data,
+                    profile:{
+                        create:{}
+                    },
+                    cart:{
+                        create:{}
+                    },
                 }
             })
 
-            const cart=await client.cart.create({
-                data:{
-                    user:{
-                        connect:{
-                            id:user.id,
-                        }
-                    }
-                }
-            })
+            let token=jwt.sign({id:user.id},process.env.JWT_SECRET_KEY, {
+                expiresIn: 30 * 24 * 60 * 60 * 1000,
+              })
+
+            res.cookie("jwt",token,{ maxAge: 30 * 24 * 60 * 60, httpOnly: true })
+
             res.status(201).json(user)
         }
     }
@@ -145,5 +174,24 @@ export const updateUser=async(req,res)=>{
     }
     catch(err){
         return res.status(500).json({error:err.stack})
+    }
+}
+
+export const getCurrentUser=async(req,res)=>{
+    const {id}=req.user
+    try{
+        const user=await client.user.findUnique({
+            where:{
+                id:id
+            },
+            include:{
+                profile:true,
+                favourites:true,
+            }
+        })
+        res.status(200).json(user)
+    }
+    catch(err){
+        return res.status(500).json({error:err.message})
     }
 }

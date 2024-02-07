@@ -2,46 +2,66 @@ import client from "../../db/index.js";
 
 
 export const createOrder=async(req,res)=>{
+    const {orderItems,amount}=req.body
     try{
-        const {userId}=req.params
-        const {orderItems,amount,productId}=req.body
+        const {id}=req.user
 
         const order=await client.order.create({
             data:{
                 user:{
                     connect:{
-                        id:userId
+                        id:id
                     }
                 },
                 totalAmount:amount,
                 orderItems:{
-                    create:{...orderItems,product:{connect:{id:productId}}
+                    create:orderItems.map(item=>({
+                        quantity:item.qty,
+                        product:{connect:{id:item.productId}}
+                    }))
                 },
+            },
+            include:{
+                orderItems:{
+                    include:{
+                        product:true
+                    }
+                }
             }
+        })
+        if(!order){
+            res.status(404).json({error:"Order not created",orderItems})
         }
+        const newCart=await client.cart.update({
+            where:{
+                userId:id
+            },
+            data:{
+                cartItems:{
+                    deleteMany:{}
+                }
+            }
         })
         res.status(201).json(order)
     }
     catch(err){
-        return res.status(500).json({error:err.message})
+        return res.status(500).json({error:err.message,orderItems})
     }
 }
 
 export const getOrderById=async(req,res)=>{
     try{    
-        const {id}=req.params;
-        const order=await client.order.findUnique({
+        const {id}=req.user;
+        const order=await client.order.findMany({
             where:{
-                id:id
+                userId:id
             },
             include:{
-                user:{
-                    select:{
-                        id:true,
-                        name:true
+                orderItems:{
+                    include:{
+                        product:true
                     }
-                },
-                orderItems:true
+                }
             }
         })
         if(!order){
